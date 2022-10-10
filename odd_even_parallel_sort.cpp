@@ -56,7 +56,7 @@ int main (int argc, char **argv){
     
     bool sorted = false;
     bool sorted_array[world_size];
-    if (num_my_element % 2 == 0) {
+    if (num_my_element % 2 == 0 && world_size > 1) {
         while (!sorted) {
             sorted = true;
             int from_p = -1;
@@ -132,9 +132,98 @@ int main (int argc, char **argv){
             MPI_Barrier(MPI_COMM_WORLD);
         }
     }
-    // if (rank == 0) std::cout << "0 here" << std::endl;
-    
-    
+    // odd number in each process
+    if (num_my_element % 2 == 1 && world_size > 1) {
+        while (!sorted){
+            sorted = true;
+            int from_p = -1;
+            if (rank == 0) {
+                MPI_Recv(&from_p, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+            else if (rank == world_size - 1) {
+                MPI_Send(my_element, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD);
+            }
+            else {
+                MPI_Send(my_element, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD);
+                MPI_Recv(&from_p, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+            
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            for (int i = 0; i < num_my_element; i = i + 2) {
+                if (i - 1 < 0) continue;
+                if (i >= num_my_element) continue;
+                if (my_element[i - 1] > my_element[i]) {
+                    sorted = false;
+                    int temp_i = my_element[i - 1];
+                    my_element[i - 1] = my_element[i];
+                    my_element[i] = temp_i;
+                }
+            }
+            int to_send;
+            if (rank % 2 == 1 && rank != world_size - 1) {
+                if (rank != world_size - 1) {
+                    if (my_element[num_my_element - 1] > from_p) {
+                        to_send = my_element[num_my_element - 1];
+                        my_element[num_my_element - 1] = from_p;
+                        sorted = false;
+                    }
+                    else {
+                        to_send = from_p;
+                    }
+                }
+                MPI_Send(&to_send, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
+            }
+            int from_p_1;
+            if (rank > 0 && rank % 2 == 0) {
+                MPI_Recv(&from_p_1, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                my_element[0] = from_p_1;
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            for (int i = 1; i < num_my_element; i = i + 2) {
+                if (i - 1 < 0) continue;
+                if (i >= num_my_element) continue;
+                if (my_element[i - 1] > my_element[i]) {
+                    sorted = false;
+                    int temp_i = my_element[i - 1];
+                    my_element[i - 1] = my_element[i];
+                    my_element[i] = temp_i;
+                }
+            }
+
+            if (rank % 2 == 0 && rank != world_size - 1) {
+                if (rank != world_size - 1) {
+                    if (my_element[num_my_element - 1] > from_p) {
+                        to_send = my_element[num_my_element - 1];
+                        my_element[num_my_element - 1] = from_p;
+                        sorted = false;
+                    }
+                    else {
+                        to_send = from_p;
+                    }
+                }
+                MPI_Send(&to_send, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
+            }
+            if (rank % 2 == 1) {
+                MPI_Recv(&from_p_1, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                my_element[0] = from_p_1;
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Gather(&sorted, 1, MPI_C_BOOL, sorted_array, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+            if (rank == 0) {
+                for (int j = 0; j < world_size; j++) {
+                    sorted = sorted_array[j] && sorted;
+                }
+            }
+            MPI_Bcast(&sorted, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+            MPI_Barrier(MPI_COMM_WORLD);
+
+        }
+        
+    }
     
 
     MPI_Gather(my_element, num_my_element, MPI_INT, sorted_elements, num_my_element, MPI_INT, 0, MPI_COMM_WORLD); // collect result from each process

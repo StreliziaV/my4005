@@ -5,5 +5,10 @@
 #SBATCH --cpus-per-task=1            # Number of CPU cores allocated to each process
 #SBATCH --partition=Project            # Partition name: Project or Debug (Debug is default)
 
-mpirun -np 8 ./psort 10000 ./test_data/10000a.in
-./check 10000 ./test_data/10000a.in.parallel.out
+mpirun -np 3 ./psort 15 ./test_data/15a.in
+./check 15 ./test_data/15a.in.parallel.out
+
+# mpirun -np 8 ./psort 80 ./test_data/80a.in
+# ./check 80 ./test_data/80a.in.parallel.out
+# mpirun -np 8 ./psort 10000 ./test_data/10000a.in
+# ./check 10000 ./test_data/10000a.in.parallel.out
