@@ -19,8 +19,12 @@ int main (int argc, char **argv){
     
     num_elements = atoi(argv[1]); // convert command line argument to num_elements
 
-    int elements[num_elements]; // store elements
-    int sorted_elements[num_elements]; // store sorted elements
+    int offset = 0;
+    if (num_elements % world_size != 0) {
+        offset = (int(num_elements / world_size) + 1) * world_size - num_elements;
+    }
+    int elements[num_elements + offset]; // store elements
+    int sorted_elements[num_elements + offset]; // store sorted elements
 
     if (rank == 0) { // read inputs from file (master process)
         std::ifstream input(argv[2]);
@@ -32,6 +36,11 @@ int main (int argc, char **argv){
         }
         std::cout << "actual number of elements:" << i << std::endl;
     }
+
+    for (int k = 0; k < offset; k++) {
+        elements[num_elements + k] = 99999999;
+    }
+    num_elements = num_elements + offset;
 
     std::chrono::high_resolution_clock::time_point t1;
     std::chrono::high_resolution_clock::time_point t2;
@@ -229,6 +238,7 @@ int main (int argc, char **argv){
     MPI_Gather(my_element, num_my_element, MPI_INT, sorted_elements, num_my_element, MPI_INT, 0, MPI_COMM_WORLD); // collect result from each process
     
     /* TODO END */
+    num_elements = num_elements - offset;
 
     if (rank == 0){ // record time (only executed in master process)
         t2 = std::chrono::high_resolution_clock::now();  
